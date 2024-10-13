@@ -1,7 +1,3 @@
-#export a module that launches an ec2 instance
-import os
-import time
-
 import boto3
 
 def launch_instance(image_id, region, instance_type, key_name, instance_name, security_group, user_data):
@@ -25,22 +21,13 @@ def launch_instance(image_id, region, instance_type, key_name, instance_name, se
             }
         ],
         UserData=user_data)
+    #Wait until instance is initialized
     ec2_instance[0].wait_until_running()
-    #wait until instance is initialized
     while ec2_instance[0].public_ip_address is None:
         ec2_instance[0].reload()
-    #check if user_data is executed, httpd should be running
-    counter = 0
-    while counter < 10:
-        #check if httpd is running
-        response = os.system("curl -s " + ec2_instance[0].public_ip_address)
-        if response == 0:
-            break
-        counter += 1
-        #wait for 10 seconds
-        time.sleep(10)
     return ec2_instance[0]
 
+#I couldn't find a way to get the instance by name, so I had to iterate through all instances and check the tags. This returns a dictionary with the instance information
 def get_instance_by_name(name, region, running):
     ec2 = boto3.client('ec2', region_name=region)
     response = ec2.describe_instances()
@@ -55,6 +42,7 @@ def get_instance_by_name(name, region, running):
                         return instance
     return None
 
+#Create a security group with the specified name, description, vpc_id, and ip_permissions
 def create_security_group(name, region, desc, vpc_id, ip_permissions):
     ec2 = boto3.resource('ec2', region_name=region)
     security_group = ec2.create_security_group(
@@ -65,17 +53,19 @@ def create_security_group(name, region, desc, vpc_id, ip_permissions):
     security_group.authorize_ingress(
         IpPermissions=ip_permissions
     )
-    print("Security Group Created, ID: ", security_group.id)
+    print(f"Security Group Created, ID: {security_group.id}")
     return security_group
 
+#Create a key pair and save it to a file. Losing the file means losing access to the instance, so there may be a better way to handle this.
 def create_key_pair(name, region):
     ec2 = boto3.client('ec2', region_name=region)
     key_pair = ec2.create_key_pair(KeyName=name)
     with open(f"{name}.pem", "w") as file:
         file.write(key_pair['KeyMaterial'])
-    print("Key Pair Created, Name: ", name)
+    print(f"Key Pair Created, Name: {name}")
     return
 
+#Why create unnecessary key pairs and security groups when you can just check if they exist?
 def key_pair_exists(name, region):
     ec2 = boto3.client('ec2', region_name=region)
     response = ec2.describe_key_pairs()
@@ -103,21 +93,20 @@ def get_security_group_id(name, region):
 def get_vpc_id(region):
     ec2 = boto3.client('ec2', region_name=region)
     response = ec2.describe_vpcs()
-    print("VPC ID: ", response['Vpcs'][0]['VpcId'])
     return response['Vpcs'][0]['VpcId']
-
 
 def delete_key_pair(key_name, region):
     ec2 = boto3.client('ec2', region_name=region)
     ec2.delete_key_pair(KeyName=key_name)
-    print("Key Pair Deleted, Name: ", key_name)
+    print(f"Key Pair Deleted, Name: {key_name}")
     return
-
 
 def terminate_instance(instance_id, region):
     ec2 = boto3.client('ec2', region_name=region)
     ec2.terminate_instances(InstanceIds=[instance_id])
     waiter = ec2.get_waiter('instance_terminated')
     waiter.wait(InstanceIds=[instance_id])
-    print("Instance Terminated, ID: ", instance_id)
+    print(f"Instance Terminated, ID: {instance_id}")
     return
+
+#A main function here would have been nice, but I didn't have time

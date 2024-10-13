@@ -1,4 +1,5 @@
 #!/bin/bash
+#I couldn't find a way to extract the html into a separate file so I left it in the user data script.
 yum install httpd -y
 systemctl enable httpd
 systemctl start httpd
@@ -9,21 +10,19 @@ INSTANCE_TYPE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169
 AVAILABILITY_ZONE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
 cat <<EOF > /var/www/html/index.html
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EC2 Instance Metadata</title>
+    <title>James Demaine 20093118</title>
 </head>
 <body>
-  <h1>EC2 Instance Metadata</h1>
-  <img src="http://devops.witdemo.net/logo.jpg" alt="Logo" />
-  <pre>
-    Instance ID: $INSTANCE_ID
-    Private IP Address: $PRIVATE_IP
-    Instance Type: $INSTANCE_TYPE
-    Availability Zone: $AVAILABILITY_ZONE
-  </pre>
+    <h1>James Demaine 20093118 DevOps Assignment</h1>
+    <img src="http://devops.witdemo.net/logo.jpg" alt="WIT Logo">
+    <pre>
+      Instance ID: $INSTANCE_ID
+      Private IP Address: $PRIVATE_IP
+      Instance Type: $INSTANCE_TYPE
+      Availability Zone: $AVAILABILITY_ZONE
+    </pre>
 </body>
 </html>
 EOF
